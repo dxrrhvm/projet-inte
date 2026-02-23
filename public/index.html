@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talk to Strangers!</title>
+
+    <link rel="stylesheet" type="text/css"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="logo-container">
+            <h1 class="logo">
+                <i class="fa-solid fa-comments"></i> VibeChat
+            </h1>
+            <p class="tagline">Talk to Strangers!</p>
+        </div>
+        <div id="online-count">
+            <span class="count">15,000+</span> users online
+        </div>
+    </header>
+
+    <main>
+        <section class="intro">
+            <div class="intro-text">
+                <h2>VibeChat - Talk to Strangers</h2>
+                <p>Welcome to the modern alternative. Connect instantly through random video chat or text chat.
+                    Anonymous, free, and safe.</p>
+            </div>
+        </section>
+
+        <section class="chat-controls">
+
+            <div class="interests-area">
+                <label for="topic-input">What do you wanna talk about?</label>
+                <div class="input-wrapper">
+                    <input type="text" id="topic-input" placeholder="Add your interests (optional)...">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <h2>Start chatting:</h2>
+
+                <div class="button-group">
+                    <button id="btn-text" class="chat-btn text-mode" data-type="text">
+                        <i class="fa-regular fa-message"></i>
+                        <span>Text</span>
+                    </button>
+
+                    <div class="divider">or</div>
+
+                    <button id="btn-video" class="chat-btn video-mode" data-type="video">
+                        <i class="fa-solid fa-video"></i>
+                        <span>Video</span>
+                    </button>
+                </div>
+                
+                <!-- <button class="start-chat-btn" data-type="video">Video</button>
+                <button class="start-chat-btn" data-type="text">Text</button> -->
+
+                <div id="tosModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <span class="close-btn" id="closeModal">&times;</span>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="ageCheck">
+                            <label for="ageCheck">
+                                <strong>OUR AGE RESTRICTIONS HAVE CHANGED. BY USING THIS SERVICE, YOU MUST AGREE TO OUR
+                                    TERMS AND CONDITIONS.</strong> See our updated <a href="#">Terms of Service</a> for
+                                more info. <strong>By checking the box you acknowledge and represent that you comply
+                                    with these age restrictions.</strong>
+                            </label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="tosCheck">
+                            <label for="tosCheck">
+                                By checking the box you acknowledge that you have reviewed and agree to be bound by the
+                                <a href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and <a
+                                    href="#">Community Guidelines</a>.
+                            </label>
+                        </div>
+
+                        <button id="confirmBtn" disabled>Confirm & continue</button>
+                    </div>
+                </div>
+                <div class="safety-note">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Chats are monitored. Keep it clean.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="info-accordions">
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>Frequently Asked Questions</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+                        <div class="qa-pair">
+                            <strong>Is this free?</strong>
+                            <p>Yes, absolutely free. No registration required.</p>
+                        </div>
+                        <div class="qa-pair">
+                            <strong>Is it safe?</strong>
+                            <p>We use AI monitoring and human moderation to keep the platform safe.</p>
+                        </div>
+                        <div class="qa-pair">
+                            <strong>Does it work on mobile?</strong>
+                            <p>Yes, no app download required. Just use your browser.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>Tips for Better Conversations</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+                        <ul style="margin-left: 1rem;">
+                            <li><strong> Be specific:</strong> Add interests like "Movies" or "Gaming".</li>
+                            <li><strong> Lighting:</strong> Make sure you are visible for video chat.</li>
+                            <li><strong> Be polite:</strong> Different cultures meet here. Be respectful.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">
+                    <span>Recent Updates</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="accordion-content">
+                    <div class="content-inner">
+                        <pre class="changelog-code">
+v2.8.0 // Nov 2025
+fix: WebRTC memory leak
+perf: signaling latency -30%
+
+v2.7.0 // Dec 2024
+feat: anti-bot system
+feat: Turnstile CAPTCHA integration
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 RandomChat. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+        </div>
+    </footer>
+
+    <button class="start-chat-btn" data-type="video">Video</button>
+    <button class="start-chat-btn" data-type="text">Text</button>
+
+    <div id="tosModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="ageCheck">
+                <label for="ageCheck">
+                    <strong>OUR AGE RESTRICTIONS HAVE CHANGED. BY USING THIS SERVICE, YOU MUST AGREE TO OUR TERMS AND
+                        CONDITIONS.</strong> See our updated <a href="#">Terms of Service</a> for more info. <strong>By
+                        checking the box you acknowledge and represent that you comply with these age
+                        restrictions.</strong>
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="tosCheck">
+                <label for="tosCheck">
+                    By checking the box you acknowledge that you have reviewed and agree to be bound by the <a
+                        href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and <a href="#">Community
+                        Guidelines</a>.
+                </label>
+            </div>
+
+            <button id="confirmBtn" disabled>Confirm & continue</button>
+        </div>
+    </div>
+
+
+
+    <div id="tosModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="ageCheck">
+                <label for="ageCheck">
+                    <strong>OUR AGE RESTRICTIONS HAVE CHANGED. BY USING THIS SERVICE, YOU MUST AGREE TO OUR TERMS AND
+                        CONDITIONS.</strong> See our updated <a href="#">Terms of Service</a> for more info. <strong>By
+                        checking the box you acknowledge and represent that you comply with these age
+                        restrictions.</strong>
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="tosCheck">
+                <label for="tosCheck">
+                    By checking the box you acknowledge that you have reviewed and agree to be bound by the <a
+                        href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and <a href="#">Community
+                        Guidelines</a>.
+                </label>
+            </div>
+
+            <button id="confirmBtn" disabled>Confirm & continue</button>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+
+</html>
