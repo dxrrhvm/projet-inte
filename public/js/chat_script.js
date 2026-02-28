@@ -1,12 +1,18 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyBkpMTOrHP8G_chHaGs15DMXqQHmjjnekw",
-  authDomain: "projetfinal-166a0.firebaseapp.com",
-  projectId: "projetfinal-166a0",
-  storageBucket: "projetfinal-166a0.firebasestorage.app",
-  messagingSenderId: "131861956577",
-  appId: "1:131861956577:web:cc4bb9712a934d312f34a0",
-  measurementId: "G-ZXJ1F0QZPJ"
+    apiKey: "AIzaSyBkpMTOrHP8G_chHaGs15DMXqQHmjjnekw",
+    authDomain: "projetfinal-166a0.firebaseapp.com",
+    projectId: "projetfinal-166a0",
+    storageBucket: "projetfinal-166a0.firebasestorage.app",
+    messagingSenderId: "131861956577",
+    appId: "1:131861956577:web:cc4bb9712a934d312f34a0",
+    measurementId: "G-ZXJ1F0QZPJ"
 };
+
+let myUserId = localStorage.getItem('vibe_uid');
+if (!myUserId) {
+    myUserId = crypto.randomUUID(); 
+    localStorage.setItem('vibe_uid', myUserId);
+}
 
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -21,6 +27,10 @@ let heartbeatInterval = null;
 let unsubscribeChat = null;
 let unsubscribeRoom = null;
 let unsubscribeCandidates = null;
+const urlParams = new URLSearchParams(window.location.search);
+const rawTags = urlParams.get('tags') || '';
+const myTags = rawTags.split(/[\s,]+/).filter(t => t.trim().length > 0).map(t => t.toLowerCase()).slice(0, 10);
+let hasDisplayedMatchedTag = false;
 
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('strangerVideo');
@@ -39,9 +49,9 @@ async function init() {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localVideo.srcObject = localStream;
         localVideo.onloadedmetadata = () => { localVideo.play(); };
-        
+
         chatLog.innerHTML = '';
-        
+
         await findStranger();
     } catch (err) {
         alert("Erreur caméra : " + err.message);
@@ -51,12 +61,36 @@ async function init() {
 
 async function findStranger() {
     chatLog.innerHTML = '<div class="system-msg">Looking for someone you can chat with...</div>';
+    hasDisplayedMatchedTag = false; 
     
     const roomsRef = db.collection('rooms');
-    const snapshot = await roomsRef.where('status', '==', 'waiting').orderBy('createdAt').limit(1).get();
+    let snapshot;
+
+    if (myTags.length > 0) {
+        snapshot = await roomsRef.where('status', '==', 'waiting')
+                                 .where('tags', 'array-contains-any', myTags)
+                                 .orderBy('createdAt').limit(5).get();
+    } else {
+        snapshot = await roomsRef.where('status', '==', 'waiting')
+                                 .where('hasTags', '==', false)
+                                 .orderBy('createdAt').limit(5).get();
+    }
     
-    if (snapshot.empty) createRoom();
-    else joinRoom(snapshot.docs[0].id);
+    let validRoomId = null;
+    if (!snapshot.empty) {
+        for (let doc of snapshot.docs) {
+            if (doc.data().callerId !== myUserId) {
+                validRoomId = doc.id;
+                break; 
+            }
+        }
+    }
+    
+    if (validRoomId) {
+        joinRoom(validRoomId);
+    } else {
+        createRoom();
+    }
 }
 
 async function createRoom() {
@@ -76,7 +110,11 @@ async function createRoom() {
         status: 'waiting',
         offer: { type: offer.type, sdp: offer.sdp },
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        tags: myTags,
+        hasTags: myTags.length > 0,
+        matchedTag: null,
+        callerId: myUserId
     };
     await roomRef.set(roomWithOffer);
     startHeartbeat(roomId);
@@ -90,13 +128,16 @@ async function createRoom() {
             return;
         }
 
-        // Cas 2: Réponse (Answer) reçue
         const data = snapshot.data();
         if (!peerConnection.currentRemoteDescription && data && data.answer) {
             const answer = new RTCSessionDescription(data.answer);
             await peerConnection.setRemoteDescription(answer);
-            // On ne met le message que si on n'a pas déjà connecté
+
             addSystemMessage("Stranger connected!");
+            if (data.matchedTag && !hasDisplayedMatchedTag) {
+                addSystemMessage(`You both like ${data.matchedTag}!`);
+                hasDisplayedMatchedTag = true;
+            }
         }
     });
 
@@ -109,22 +150,40 @@ async function joinRoom(id) {
     roomId = id;
 
     const roomRef = db.collection('rooms').doc(roomId);
-    
-    // On essaie de rejoindre. Si ça échoue (concurrence), on retente findStranger
+
+    let commonTag = null; 
+
     try {
         await db.runTransaction(async (transaction) => {
             const doc = await transaction.get(roomRef);
             if (!doc.exists || doc.data().status !== 'waiting') {
                 throw "Room already taken";
             }
-            transaction.update(roomRef, { status: 'busy', lastActive: firebase.firestore.FieldValue.serverTimestamp() });
+
+            const roomData = doc.data();
+            if (myTags.length > 0 && roomData.tags && roomData.tags.length > 0) {
+                const intersection = myTags.filter(t => roomData.tags.includes(t));
+                if (intersection.length > 0) {
+                    commonTag = intersection[0]; 
+                }
+            }
+
+            transaction.update(roomRef, {
+                status: 'busy',
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                matchedTag: commonTag 
+            });
         });
     } catch (e) {
         console.log("Room busy, retrying...");
-        return findStranger(); // Réessayer une autre salle
+        return findStranger();
     }
 
     addSystemMessage("Stranger connected!");
+    if (commonTag && !hasDisplayedMatchedTag) {
+        addSystemMessage(`You both like ${commonTag}`);
+        hasDisplayedMatchedTag = true;
+    }
     startHeartbeat(roomId);
 
     peerConnection = new RTCPeerConnection(servers);
@@ -171,17 +230,17 @@ function setupPeerConnection() {
 // --- SKIP ---
 async function nextStranger() {
     showGrayScreen();
-    
+
     // Signaler départ
     if (roomId) {
-        try { await db.collection('rooms').doc(roomId).update({ status: 'disconnected' }); } catch(e) {}
+        try { await db.collection('rooms').doc(roomId).update({ status: 'disconnected' }); } catch (e) { }
     }
 
     cleanupConnections();
-    
+
     // IMPORTANT : On ne met pas de message ici car findStranger le fera
     chatInput.value = '';
-    
+
     await findStranger();
 }
 
@@ -191,7 +250,7 @@ function cleanupConnections() {
         peerConnection.close();
         peerConnection = null;
     }
-    
+
     if (unsubscribeChat) unsubscribeChat();
     if (unsubscribeRoom) unsubscribeRoom();
     if (unsubscribeCandidates) unsubscribeCandidates();
@@ -200,7 +259,7 @@ function cleanupConnections() {
     if (roomId) {
         const idToDelete = roomId;
         roomId = null;
-        setTimeout(() => { db.collection('rooms').doc(idToDelete).delete().catch(e => {}); }, 2000);
+        setTimeout(() => { db.collection('rooms').doc(idToDelete).delete().catch(e => { }); }, 2000);
     }
 }
 
@@ -258,7 +317,7 @@ async function sendMessage() {
 }
 
 function updateLastActive(id) {
-    if(id) db.collection('rooms').doc(id).update({lastActive: firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>{});
+    if (id) db.collection('rooms').doc(id).update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() }).catch(e => { });
 }
 
 function startHeartbeat(id) {
@@ -288,11 +347,11 @@ function addSystemMessage(text) {
 sendBtn.addEventListener('click', sendMessage);
 stopBtn.addEventListener('click', nextStranger);
 quitBtn.addEventListener('click', () => {
-    if (roomId) db.collection('rooms').doc(roomId).update({ status: 'disconnected' }).catch(e=>{});
+    if (roomId) db.collection('rooms').doc(roomId).update({ status: 'disconnected' }).catch(e => { });
     cleanupConnections();
     if (localStream) localStream.getTracks().forEach(track => track.stop());
-    window.location.href = "index.html";
+    window.location.href = "/";
 });
-chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }});
+chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') nextStranger(); });
 window.addEventListener('beforeunload', async () => { if (roomId) await db.collection('rooms').doc(roomId).update({ status: 'disconnected' }); });

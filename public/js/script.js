@@ -15,32 +15,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-   // --- 2. CODE MODALE ---
     const modal = document.getElementById('tosModal');
     const closeBtn = document.getElementById('closeModal');
     const ageCheck = document.getElementById('ageCheck');
     const tosCheck = document.getElementById('tosCheck');
     const confirmBtn = document.getElementById('confirmBtn');
     
-    // On cible tes vrais boutons avec la classe .chat-btn
     const chatButtons = document.querySelectorAll('.chat-btn'); 
     let chatTypeSelection = ''; 
 
-    // Afficher la modale quand on clique sur Texte ou Vidéo
     chatButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.preventDefault(); // Empêche le lien de s'ouvrir tout de suite
-            chatTypeSelection = btn.dataset.type; // Enregistre si c'est 'text' ou 'video'
-            modal.style.display = 'flex'; // Affiche la modale
+            e.preventDefault(); 
+            chatTypeSelection = btn.dataset.type; 
+            modal.style.display = 'flex'; 
         });
     });
 
-    // Fermer la modale (avec le bouton X)
     closeBtn.addEventListener('click', () => {
         modal.style.display = 'none';
     });
 
-    // Fonction pour vérifier si les deux cases sont cochées
     function validateCheckboxes() {
         if (ageCheck.checked && tosCheck.checked) {
             confirmBtn.disabled = false;
@@ -51,20 +46,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Écouter les changements sur les cases à cocher
     ageCheck.addEventListener('change', validateCheckboxes);
     tosCheck.addEventListener('change', validateCheckboxes);
 
-    // Action lors du clic sur le bouton "Confirm & continue"
-    confirmBtn.addEventListener('click', () => {
+   confirmBtn.addEventListener('click', () => {
         if (!confirmBtn.disabled) {
             modal.style.display = 'none';
             
-            // Redirection selon le bouton cliqué au départ
+            const tagsInput = document.getElementById('topic-input').value;
+            const urlParams = new URLSearchParams();
+            if (tagsInput.trim()) {
+                urlParams.set('tags', tagsInput);
+            }
+
             if (chatTypeSelection === 'video') {
-                window.location.href = '/chat'; // Ouvre la page de chat vidéo
+                const queryString = tagsInput.trim() ? '?' + urlParams.toString() : '';
+                window.location.href = '/chat' + queryString;
             } else if (chatTypeSelection === 'text') {
-                alert('Text chat coming soon!'); // Ton alerte pour le moment
+                alert('Text chat coming soon!');
             }
         }
     });
