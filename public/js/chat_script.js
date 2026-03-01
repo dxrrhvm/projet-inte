@@ -330,6 +330,10 @@ function registerPeerConnectionListeners() {
         remoteVideo.srcObject = remoteStream;
         remoteVideo.style.display = "block";
         if (remoteVideo.parentElement) remoteVideo.parentElement.style.backgroundColor = "black";
+        
+        remoteVideo.play().catch(error => {
+            console.warn("Le navigateur a essayé de bloquer le son :", error);
+        });
     };
 }
 
