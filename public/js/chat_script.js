@@ -17,7 +17,35 @@ if (!myUserId) {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-const servers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+const servers = { 
+    iceServers: [
+        { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+        
+        { urls: "stun:stun.relay.metered.ca:80" },
+        
+        {
+            urls: "turn:global.relay.metered.ca:80",
+            username: "2f00788b456343c6f3344bfc",
+            credential: "VCShrsT0EBmaTP7a",
+        },
+        {
+            urls: "turn:global.relay.metered.ca:80?transport=tcp",
+            username: "2f00788b456343c6f3344bfc",
+            credential: "VCShrsT0EBmaTP7a",
+        },
+        {
+            urls: "turn:global.relay.metered.ca:443",
+            username: "2f00788b456343c6f3344bfc",
+            credential: "VCShrsT0EBmaTP7a",
+        },
+        {
+            urls: "turns:global.relay.metered.ca:443?transport=tcp",
+            username: "2f00788b456343c6f3344bfc",
+            credential: "VCShrsT0EBmaTP7a",
+        }
+    ] 
+};
+
 let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
