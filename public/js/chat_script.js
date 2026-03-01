@@ -58,36 +58,59 @@ async function init() {
         window.location.href = "index.html";
     }
 }
-
 async function findStranger() {
     chatLog.innerHTML = '<div class="system-msg">Looking for someone you can chat with...</div>';
-    hasDisplayedMatchedTag = false; 
+    hasDisplayedMatchedTag = false; // Reset pour le nouveau chat
     
     const roomsRef = db.collection('rooms');
-    let snapshot;
-
-    if (myTags.length > 0) {
-        snapshot = await roomsRef.where('status', '==', 'waiting')
-                                 .where('tags', 'array-contains-any', myTags)
-                                 .orderBy('createdAt').limit(5).get();
-    } else {
-        snapshot = await roomsRef.where('status', '==', 'waiting')
-                                 .where('hasTags', '==', false)
-                                 .orderBy('createdAt').limit(5).get();
-    }
-    
     let validRoomId = null;
-    if (!snapshot.empty) {
-        for (let doc of snapshot.docs) {
-            if (doc.data().callerId !== myUserId) {
-                validRoomId = doc.id;
-                break; 
+    let commonTag = null;
+
+    // ÉTAPE 1 : PRIORITÉ AUX TAGS
+    // On cherche d'abord quelqu'un qui partage au moins un intérêt
+    if (myTags.length > 0) {
+        const snapshotTags = await roomsRef.where('status', '==', 'waiting')
+                                         .where('tags', 'array-contains-any', myTags)
+                                         .orderBy('createdAt').limit(5).get();
+        
+        if (!snapshotTags.empty) {
+            for (let doc of snapshotTags.docs) {
+                const roomData = doc.data();
+                // On vérifie que ce n'est pas nous-même ni un vieux salon buggé
+                if (roomData.callerId && roomData.callerId !== myUserId) {
+                    validRoomId = doc.id;
+                    // On détermine le tag commun pour l'afficher
+                    if (roomData.tags && roomData.tags.length > 0) {
+                        const intersection = myTags.filter(t => roomData.tags.includes(t));
+                        if (intersection.length > 0) commonTag = intersection[0];
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // ÉTAPE 2 : FALLBACK (Aucun match de tag trouvé, ou aucun tag entré)
+    // On cherche N'IMPORTE QUI en attente
+    if (!validRoomId) {
+        const snapshotAny = await roomsRef.where('status', '==', 'waiting')
+                                        .orderBy('createdAt').limit(5).get();
+        
+        if (!snapshotAny.empty) {
+            for (let doc of snapshotAny.docs) {
+                const roomData = doc.data();
+                if (roomData.callerId && roomData.callerId !== myUserId) {
+                    validRoomId = doc.id;
+                    commonTag = null; // Aucun tag commun puisqu'on a pris au hasard
+                    break;
+                }
             }
         }
     }
     
+    // ÉTAPE 3 : REJOINDRE OU CRÉER
     if (validRoomId) {
-        joinRoom(validRoomId);
+        joinRoom(validRoomId, commonTag); // On transmet le tag commun trouvé (ou null)
     } else {
         createRoom();
     }
@@ -114,7 +137,7 @@ async function createRoom() {
         tags: myTags,
         hasTags: myTags.length > 0,
         matchedTag: null,
-        callerId: myUserId
+        callerId: myUserId 
     };
     await roomRef.set(roomWithOffer);
     startHeartbeat(roomId);
@@ -132,60 +155,55 @@ async function createRoom() {
         if (!peerConnection.currentRemoteDescription && data && data.answer) {
             const answer = new RTCSessionDescription(data.answer);
             await peerConnection.setRemoteDescription(answer);
-
+            
             addSystemMessage("Stranger connected!");
+            
             if (data.matchedTag && !hasDisplayedMatchedTag) {
                 addSystemMessage(`You both like ${data.matchedTag}!`);
                 hasDisplayedMatchedTag = true;
             }
+
+            // CORRECTION ICI : On écoute les adresses IP (caméra) SEULEMENT 
+            // après que la connexion de base soit officiellement établie.
+            listenToICECandidates(roomRef, 'calleeCandidates');
         }
     });
 
-    listenToICECandidates(roomRef, 'calleeCandidates');
     listenToChat(roomRef);
 }
 
-async function joinRoom(id) {
+async function joinRoom(id, commonTag = null) {
     role = 'callee';
     roomId = id;
 
     const roomRef = db.collection('rooms').doc(roomId);
-
-    let commonTag = null; 
-
+    
     try {
         await db.runTransaction(async (transaction) => {
             const doc = await transaction.get(roomRef);
             if (!doc.exists || doc.data().status !== 'waiting') {
                 throw "Room already taken";
             }
-
-            const roomData = doc.data();
-            if (myTags.length > 0 && roomData.tags && roomData.tags.length > 0) {
-                const intersection = myTags.filter(t => roomData.tags.includes(t));
-                if (intersection.length > 0) {
-                    commonTag = intersection[0]; 
-                }
-            }
-
-            transaction.update(roomRef, {
-                status: 'busy',
+            
+            transaction.update(roomRef, { 
+                status: 'busy', 
                 lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                matchedTag: commonTag 
+                matchedTag: commonTag // On l'envoie à la base de données pour que l'autre le voie
             });
         });
     } catch (e) {
         console.log("Room busy, retrying...");
-        return findStranger();
+        return findStranger(); 
     }
 
     addSystemMessage("Stranger connected!");
+    // On affiche le tag commun localement
     if (commonTag && !hasDisplayedMatchedTag) {
-        addSystemMessage(`You both like ${commonTag}`);
+        addSystemMessage(`You both like ${commonTag}!`);
         hasDisplayedMatchedTag = true;
     }
-    startHeartbeat(roomId);
 
+    startHeartbeat(roomId);
     peerConnection = new RTCPeerConnection(servers);
     setupPeerConnection();
 
@@ -290,7 +308,13 @@ function registerPeerConnectionListeners() {
 function listenToICECandidates(roomRef, col) {
     unsubscribeCandidates = roomRef.collection(col).onSnapshot(s => {
         s.docChanges().forEach(async c => {
-            if (c.type === 'added') await peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data()));
+            if (c.type === 'added') {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data()));
+                } catch (e) {
+                    console.error("ICE Candidate Error:", e);
+                }
+            }
         });
     });
 }
