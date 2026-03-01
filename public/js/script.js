@@ -59,11 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 urlParams.set('tags', tagsInput);
             }
 
+            const queryString = tagsInput.trim() ? '?' + urlParams.toString() : '';
             if (chatTypeSelection === 'video') {
-                const queryString = tagsInput.trim() ? '?' + urlParams.toString() : '';
+                
                 window.location.href = '/chat' + queryString;
             } else if (chatTypeSelection === 'text') {
-                alert('Text chat coming soon!');
+                window.location.href = '/text' + queryString;
             }
         }
     });
