@@ -175,3 +175,58 @@ main {
 .chat-input:focus {
     border-color: #999;
 }
+
+/* --- LAYOUT CHAT + PUBS --- */
+.chat-content-wrapper {
+    display: flex;
+    flex: 1; /* Prend l'espace vertical disponible entre le haut et l'input */
+    overflow: hidden;
+}
+
+.chat-log-container {
+    flex: 1; /* Le chat prend tout l'espace à gauche de la pub */
+    position: relative; /* TRÈS IMPORTANT : Garde le bouton Report bloqué dans ce cadre */
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- ZONE DE PUB INVISIBLE PAR DÉFAUT --- */
+.ad-frame {
+    background-color: transparent;
+    /* On ne met NI largeur, NI bordure ici ! */
+}
+
+.ad-frame:not(:empty) {
+    width: 160px;
+    border-left: 1px solid #ccc;
+}
+
+/* Cache la pub sur les téléphones pour ne pas écraser le chat */
+@media (max-width: 768px) {
+    .ad-frame {
+        display: none !important;
+    }
+}
+
+/* --- BOUTON REPORT FLOTTANT --- */
+.report-btn-top {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background-color: rgba(255, 255, 255, 0.9); /* Fond blanc légèrement transparent */
+    color: #d32f2f;
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10; /* Le garde par-dessus les messages du chat */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.report-btn-top:hover {
+    background-color: #d32f2f;
+    color: #fff;
+}
